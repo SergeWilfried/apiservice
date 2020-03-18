@@ -4,7 +4,7 @@ var axios = require('axios');
 
 
 
-export async function sendPayment(provider, amount, mobile, recipientName, charge) {
+async function sendPayment(provider, amount, mobile, recipientName, charge) {
     var data = {
         "data": {
             "provider": provider,
@@ -30,7 +30,7 @@ export async function sendPayment(provider, amount, mobile, recipientName, charg
         })
 }
 
-export async function requestPayment(provider, amount, mobile, otp, recipientName, charge) {
+async function requestPayment(provider, amount, mobile, otp, recipientName, charge) {
     var data = {
         "data": {
             "provider": provider,
@@ -52,3 +52,9 @@ export async function requestPayment(provider, amount, mobile, otp, recipientNam
             this.errors.push(e)
         })
 }
+
+
+
+
+export { sendPayment, requestPayment };
+
