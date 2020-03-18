@@ -5,7 +5,7 @@ var jwks = require('jwks-rsa');
 var morgan = require('morgan'); // Charge le middleware de logging
 var session = require('cookie-session'); // Charge le middleware de sessions
 var bodyParser = require('body-parser');
-
+var request = require('./src/http-common')
 const port = process.env.PORT || 8080;
 
 var bodyParser = require('body-parser');
@@ -15,6 +15,7 @@ const Firestore = require('@google-cloud/firestore');
 const fs = require('fs')
 const db = new Firestore();
 
+const apiVersion = 'v1';
 
 
 var isAuthenticated = jwt({
@@ -131,6 +132,8 @@ app.post('/payments/mass/send', isAuthenticated, (req, res) => {
     //console.log('requestBody ', requestBody)
     let transactions = requestBody
     let apiKey = req.headers['x-api-key']
+    let env = req.headers['environment']
+
     console.log('api key ', apiKey)
     let tx = []
     if (req.headers['user-agent'] == 'GoogleStackdriverMonitoring-UptimeChecks(https://cloud.google.com/monitoring)') {
@@ -215,6 +218,8 @@ app.post('/payments/mass/send', isAuthenticated, (req, res) => {
 app.post('/payments/send', isAuthenticated, (req, res) => {
     let requestBody = req.body
     let apiKey = req.headers['x-api-key']
+    let env = req.headers['environment']
+
     console.log('request currency from payload', req.body.recipient_local_currency)
     let tx = [
         {
@@ -285,77 +290,84 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
 app.post('/payments/request', isAuthenticated, (req, res) => {
     let requestBody = req.body
     let apiKey = req.headers['x-api-key']
+    let env = req.headers['environment']
 
-    if (requestBody.customer_otp_code == "546123") {
-        res.status(200).json({
-            "statusCode": 200,
-            "message": 'Pending'
-        });
-    } else {
-        res.status(400).json({
-            "statusCode": 400,
-            "message": 'OTP invalide'
-        });
-    }
-
-    let tx = [
-        {
-            "tx_type": "debit",
-            "user": req.body.customer_email,
-            "amount": req.body.amount_paid,
-            "subtype": 'charge',
-            "currency": "DEMO",
-            "metadata": {
-                // "otp": req.body.tx_otp,
-                "partnerTxId": req.body.partner_transaction_Id,
-                "transaction_provider_mode": req.body.transaction_provider_mode,
-                "transaction_provider_name": req.body.transaction_provider_name
-            }
-        },
-        {
-            "tx_type": "credit",
-            "user": req.body.partner_secret_key,
-            "amount": req.body.amount_paid,
-            "account": req.body.partner_accountRef,
-            "subtype": 'charge',
-            "currency": req.body.recipient_local_currency,
-            "metadata": {
-                "partnerTxId": req.body.partner_transaction_Id,
-                "transaction_provider_mode": req.body.transaction_provider_mode,
-                "transaction_provider_name": req.body.transaction_provider_name
-            }
-        },
-    ]
-
-    let requestToken = 'Token ' + apiKey.toString()
-    let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
-    let requestConfig = {
-        method: 'POST',
-        json: true,
-        body: {
-            "transactions": tx
-        },
-        resolveWithFullResponse: false,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': requestToken,
-        },
-    }
-
-    rp(endpointFeed, requestConfig)
-        .then((response) => {
-            res.json({
-                "status": response.status,
-                "transaction status": response.data.status
+    if (env == 'sandbox') {
+        if (requestBody.customer_otp_code == "546123") {
+            await request.sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
+                res.status(200).json(onValue).catch((onError) => {
+                    res.status(404).json(onError)
+                })
             })
-        }).catch((err) => {
-            console.log(req.body.amount_paid)
+
+        } else {
             res.status(400).json({
-                "name": err.error.status,
-                "statusCode": err.statusCode,
-                "message": err.message.replace('\\', '')
+                "statusCode": 400,
+                "message": 'OTP invalide'
             });
-        });
+        }
+    }
+    else {
+
+        let tx = [
+            {
+                "tx_type": "debit",
+                "user": req.body.customer_email,
+                "amount": req.body.amount_paid,
+                "subtype": 'charge',
+                "currency": "DEMO",
+                "metadata": {
+                    // "otp": req.body.tx_otp,
+                    "partnerTxId": req.body.partner_transaction_Id,
+                    "transaction_provider_mode": req.body.transaction_provider_mode,
+                    "transaction_provider_name": req.body.transaction_provider_name
+                }
+            },
+            {
+                "tx_type": "credit",
+                "user": req.body.partner_secret_key,
+                "amount": req.body.amount_paid,
+                "account": req.body.partner_accountRef,
+                "subtype": 'charge',
+                "currency": req.body.recipient_local_currency,
+                "metadata": {
+                    "partnerTxId": req.body.partner_transaction_Id,
+                    "transaction_provider_mode": req.body.transaction_provider_mode,
+                    "transaction_provider_name": req.body.transaction_provider_name
+                }
+            },
+        ]
+
+        let requestToken = 'Token ' + apiKey.toString()
+        let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
+        let requestConfig = {
+            method: 'POST',
+            json: true,
+            body: {
+                "transactions": tx
+            },
+            resolveWithFullResponse: false,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': requestToken,
+            },
+        }
+
+        rp(endpointFeed, requestConfig)
+            .then((response) => {
+                res.json({
+                    "status": response.status,
+                    "transaction status": response.data.status
+                })
+            }).catch((err) => {
+                console.log(req.body.amount_paid)
+                res.status(400).json({
+                    "name": err.error.status,
+                    "statusCode": err.statusCode,
+                    "message": err.message.replace('\\', '')
+                });
+            });
+    }
 })
 
 
