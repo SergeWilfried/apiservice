@@ -6,6 +6,7 @@ var morgan = require('morgan'); // Charge le middleware de logging
 var session = require('cookie-session'); // Charge le middleware de sessions
 var bodyParser = require('body-parser');
 
+import { sendPayment } from "./src/http-common";
 const port = process.env.PORT || 8080;
 
 var bodyParser = require('body-parser');
@@ -240,7 +241,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
             "user": req.body.recipient_mobile,
             "amount": req.body.amount_received,
             "account": req.body.recipient_account_ref,
-            "currency": "DEMO",
+            "currency": "TOKEN",
             "metadata": {
                 "partnerTxId": req.body.partner_transaction_Id,
                 "transaction_provider_mode": req.body.transaction_provider_mode,
@@ -269,20 +270,30 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
         },
     }
     console.log('Token ', apiKey)
-    rp(endpointFeed, requestConfig)
-        .then((response) => {
-            res.json({
-                "status": response.status,
-                "transaction status": response.data.status
-            })
-        }).catch((err) => {
-            res.status(400).json({
-                "name": err.error.status,
-                "statusCode": err.statusCode,
-                "message": err.message.replace('\\', '')
+    if (env == sandbox) {
+        res.status(200).json({
+
+            'status': 'Success',
+            'id': req.body.partner_transaction_Id,
+            'amount': req.body.amount_received
+        })
+
+    } else {
+        rp(endpointFeed, requestConfig)
+            .then((response) => {
+                res.json({
+                    "status": response.status,
+                    "transaction status": response.data.status
+                })
+            }).catch((err) => {
+                res.status(400).json({
+                    "name": err.error.status,
+                    "statusCode": err.statusCode,
+                    "message": err.message.replace('\\', '')
+                });
+                console.log('error', err)
             });
-            console.log('error', err)
-        });
+    }
 })
 
 
@@ -293,7 +304,7 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
 
     if (env == 'sandbox') {
         if (requestBody.customer_otp_code == "546123") {
-            await request.sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
+            await sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
                 res.status(200).json(onValue).catch((onError) => {
                     res.status(404).json(onError)
                 })
