@@ -270,7 +270,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
         },
     }
     console.log('Token ', apiKey)
-    if (env == sandbox) {
+    if (env == "sandbox") {
         res.status(200).json({
 
             'status': 'Success',
