@@ -1,0 +1,27 @@
+{
+    "name": "apiservice",
+    "version": "1.0.0",
+    "description": "Api Service",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js"
+    },
+    "author": "",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@google-cloud/firestore": "^3.4.1",
+        "@slack/webhook": "^5.0.1",
+        "api-key-auth": "^0.2.2",
+        "axios": "^0.19.2",
+        "cookie-session": "^1.4.0",
+        "esm": "^3.2.25",
+        "express": "^4.17.1",
+        "express-jwt": "^5.3.1",
+        "jsonwebtoken": "^8.5.1",
+        "jwks-rsa": "^1.6.0",
+        "morgan": "^1.9.1",
+        "rehive": "^1.22.0",
+        "request": "^2.88.0",
+        "request-promise": "^4.2.5"
+    }
+}
