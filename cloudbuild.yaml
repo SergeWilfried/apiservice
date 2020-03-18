@@ -3,3 +3,5 @@ steps:
   args: ['build', '-t', 'gcr.io/duniapay-dc166/github.com/inquisiteur/apiservice:$SHORT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'gcr.io/duniapay-dc166/github.com/inquisiteur/apiservice:$SHORT_SHA']
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['beta', 'run', 'deploy', 'apiservice', '--image=gcr.io/duniapay-dc166/github.com/inquisiteur/apiservice:$SHORT_SHA', '--region=us-east4']
