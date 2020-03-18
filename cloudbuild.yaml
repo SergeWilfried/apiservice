@@ -1,0 +1,5 @@
+steps:
+- name: 'Build Container'
+  args: ['build', '-t', 'gcr.io/duniapay-dc166/github.com/inquisiteur/apiservice:$SHORT_SHA', '.']
+- name: 'Deploy Container'
+  args: ['push', 'gcr.io/duniapay-dc166/github.com/inquisiteur/apiservice:$SHORT_SHA']
