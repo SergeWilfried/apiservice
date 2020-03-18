@@ -272,8 +272,8 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
     console.log('Token ', apiKey)
     if (env == "sandbox") {
         res.status(200).json({
-
             'status': 'Success',
+            'provider': req.body.transaction_provider_name,
             'id': req.body.partner_transaction_Id,
             'amount': req.body.amount_received
         })
