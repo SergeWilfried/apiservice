@@ -5,7 +5,7 @@ var jwks = require('jwks-rsa');
 var morgan = require('morgan'); // Charge le middleware de logging
 var session = require('cookie-session'); // Charge le middleware de sessions
 var bodyParser = require('body-parser');
-var request = require('./src/http-common')
+
 const port = process.env.PORT || 8080;
 
 var bodyParser = require('body-parser');
@@ -15,7 +15,6 @@ const Firestore = require('@google-cloud/firestore');
 const fs = require('fs')
 const db = new Firestore();
 
-const apiVersion = 'v1';
 
 
 var isAuthenticated = jwt({
@@ -287,7 +286,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
 })
 
 
-app.post('/payments/request', isAuthenticated, (req, res) => {
+app.post('/payments/request', isAuthenticated, async (req, res) => {
     let requestBody = req.body
     let apiKey = req.headers['x-api-key']
     let env = req.headers['environment']
