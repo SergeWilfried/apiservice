@@ -5,8 +5,8 @@ var jwks = require('jwks-rsa');
 var morgan = require('morgan'); // Charge le middleware de logging
 var session = require('cookie-session'); // Charge le middleware de sessions
 var bodyParser = require('body-parser');
+var axios = require('axios');
 
-import { sendPayment } from "./src/http-common";
 const port = process.env.PORT || 8080;
 
 var bodyParser = require('body-parser');
@@ -643,3 +643,57 @@ async function slackWorkflow(message, channel) {
         text: message
     });
 }
+
+
+
+
+async function sendPayment(provider, amount, mobile, recipientName, charge) {
+    var data = {
+        "data": {
+            "provider": provider,
+            "operation": "CASHIN",
+            "amount": amount,
+            "mobile": mobile,
+            "recipientName": recipientName,
+            "charge": charge,
+            "clientTimestamp": Date.now()
+        },
+    }
+    await axios.post(`https://us-central1-duniapay-dc166.cloudfunctions.net/toMobileMoney`, data)
+        .then(response => {
+            // JSON responses are automatically parsed.
+            console.info('SendPayment')
+
+            console.info(response)
+        })
+        .catch(e => {
+            this.errors.push(e)
+            console.error('Payment Failure')
+
+        })
+}
+
+async function requestPayment(provider, amount, mobile, otp, recipientName, charge) {
+    var data = {
+        "data": {
+            "provider": provider,
+            "operation": "CASHIN",
+            "amount": amount,
+            "mobile": mobile,
+            "otp": otp,
+            "recipientName": recipientName,
+            "charge": charge,
+            "clientTimestamp": Date.now()
+        },
+    }
+    await axios.post(`https://us-central1-duniapay-dc166.cloudfunctions.net/postIntouch`)
+        .then(response => {
+            // JSON responses are automatically parsed.
+            this.posts = response.data
+        })
+        .catch(e => {
+            this.errors.push(e)
+        })
+}
+
+
