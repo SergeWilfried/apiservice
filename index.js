@@ -231,6 +231,13 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
                     // doc.data() is never undefined for query doc snapshots
                     console.log(doc.id, " => ", doc.data());
                     partnerAccount = doc.data()
+                    let userBalance = partnerAccount['accounts'][currency]['balance'];
+                    if (Number(userBalance < Number(req.body.amount_received))) {
+                        res.status(403).json({
+                            'status': 'Failure',
+                            'message': 'Insufficient balance',
+                        })
+                    }
                 });
             })
             .catch(function (error) {
