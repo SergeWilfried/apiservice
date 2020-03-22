@@ -314,26 +314,20 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
     let apiKey = req.headers['x-api-key']
     let env = req.headers['environment']
 
-    if (env == 'sandbox') {
-        if (requestBody.customer_otp_code == "432123" && requestBody.amount_paid == 1500) {
-            res.status(200).json({
-                'status': 'Pending',
-                'transaction': req.body
-            })
+    if (requestBody.customer_otp_code == "432123" && requestBody.amount_paid == 1500) {
+        res.status(200).json({
+            'status': 'Pending',
+            'transaction': req.body
+        })
 
 
-        } else {
-            res.status(403).json({
-                "statusCode": 403,
-                "message": 'Informations invalides.'
-            });
-        }
     } else {
-        res.status(404).json({
-            "statusCode": 404,
-            "message": 'Unauthorized'
+        res.status(403).json({
+            "statusCode": 403,
+            "message": 'Informations invalides.'
         });
     }
+
     // else {
 
     //     let tx = [
