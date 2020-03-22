@@ -281,24 +281,11 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
         } else {
             res.status(200).json({
                 'status': 'Success',
-                'provider': req.body.transaction_provider_name,
+                'provider': req.body.transaction_provider_name.toString().toUpperCase(),
                 'id': req.body.partner_transaction_Id,
-                'amount': req.body.amount_received
+                'amount': req.body.amount_received,
+                'currency': req.body.recipient_local_currency
             })
-
-            //  citiesRef.where("x-api-key", "==", apiKey)
-            //     .get()
-            //     .then(function (querySnapshot) {
-            //         querySnapshot.forEach(function (doc) {
-            //             // doc.data() is never undefined for query doc snapshots
-            //             console.log(doc.id, " => ", doc.data());
-
-            //             partnerAccount = doc.data()
-            //         });
-            //     })
-            //     .catch(function (error) {
-            //         console.log("Error getting documents: ", error);
-            //     });
         }
 
 
