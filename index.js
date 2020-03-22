@@ -219,8 +219,41 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
     let requestBody = req.body
     let apiKey = req.headers['x-api-key']
     let env = req.headers['environment']
-
-    console.log('request currency from payload', req.body.recipient_local_currency)
+    var partnersRef = db.collection("partners");
+    var partnerAccount;
+    let currency = req.body.recipient_local_currency
+    console.info('currency from payload', req.body.recipient_local_currency)
+    try {
+        partnersRef.where("x-api-key", "==", apiKey)
+            .get()
+            .then(function (querySnapshot) {
+                querySnapshot.forEach(function (doc) {
+                    // doc.data() is never undefined for query doc snapshots
+                    console.log(doc.id, " => ", doc.data());
+                    partnerAccount = doc.data()
+                });
+            })
+            .catch(function (error) {
+                console.error("Unable to access this partner account ", error);
+                res.status(404).json({
+                    'status': 'Failed',
+                    'message': 'Unauthorized access. Please contact your account manager'
+                })
+            });
+    } catch (error) {
+        console.error(error)
+        res.status(404).json({
+            'status': 'Failed',
+            'message': 'Unauthorized access. Please contact your account manager'
+        })
+    }
+    let userBalance = partnerAccount['accounts'][currency]['balance'];
+    if (Number(userBalance < Number(req.body.amount_received))) {
+        res.status(403).json({
+            'status': 'Failure',
+            'message': 'Insufficient balance',
+        })
+    }
     let tx = [
         {
             "tx_type": "debit",
@@ -271,29 +304,42 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
     }
     console.log('Token ', apiKey)
     if (env == "sandbox") {
-        res.status(200).json({
-            'status': 'Success',
-            'provider': req.body.transaction_provider_name,
-            'id': req.body.partner_transaction_Id,
-            'amount': req.body.amount_received
-        })
-
+        /// Initiate batch update
+        var batch = db.batch();
+        /// Update balance
+        batch.update(partnerAccount, {
+            "accounts": {
+                'XOF': {
+                    'balance': Number(userBalance) - Number(req.body.amount_received)
+                }
+            }
+        });
     } else {
         rp(endpointFeed, requestConfig)
             .then((response) => {
-                res.json({
+                let payload = {
                     "status": response.status,
                     "transaction status": response.data.status
+                }
+                batch.update(partnerAccount, {
+                    "status": payload
                 })
+                batch.commit();
+                res.status(200).json(payload)
             }).catch((err) => {
-                res.status(400).json({
+                let payload = {
                     "name": err.error.status,
                     "statusCode": err.statusCode,
                     "message": err.message.replace('\\', '')
-                });
-                console.log('error', err)
+                }
+                batch.commit();
+                batch.update(partnerAccount, {
+                    "status": payload
+                })
+                res.status(400).json(payload);
             });
     }
+    res.end()
 })
 
 
