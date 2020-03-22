@@ -223,38 +223,23 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
     var partnerAccount;
     let currency = req.body.recipient_local_currency
     console.info('currency from payload', req.body.recipient_local_currency)
-    try {
-        partnersRef.where("x-api-key", "==", apiKey)
-            .get()
-            .then(function (querySnapshot) {
-                querySnapshot.forEach(function (doc) {
-                    // doc.data() is never undefined for query doc snapshots
-
-                    partnerAccount = doc.data()
-                    console.info('partnerAccount', partnerAccount)
-                    let userBalance = partnerAccount['accounts'][currency]['balance'];
-                    if (Number(userBalance < Number(req.body.amount_received))) {
-                        res.status(403).json({
-                            'status': 'Failure',
-                            'message': 'Insufficient balance',
-                        })
-                    }
-                });
-            })
-            .catch(function (error) {
-                console.error("Unable to access this partner account ", error);
-                res.status(404).json({
-                    'status': 'Failed',
-                    'message': 'Unauthorized access. Please contact your account manager'
-                })
-            });
-    } catch (error) {
-        console.error(error)
-        res.status(404).json({
-            'status': 'Failed',
-            'message': 'Unauthorized access. Please contact your account manager'
-        })
+    let userBalance;
+    let requestToken = 'Token ' + apiKey.toString()
+    //  console.log(requestHeader)
+    let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
+    let requestConfig = {
+        method: 'POST',
+        json: true,
+        body: {
+            "transactions": tx
+        },
+        resolveWithFullResponse: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': requestToken,
+        },
     }
+    console.log('Token ', apiKey)
 
     let tx = [
         {
@@ -289,58 +274,79 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
         console.info('health check passsed')
         res.send(200)
     }
-    let requestToken = 'Token ' + apiKey.toString()
-    //  console.log(requestHeader)
-    let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
-    let requestConfig = {
-        method: 'POST',
-        json: true,
-        body: {
-            "transactions": tx
-        },
-        resolveWithFullResponse: false,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': requestToken,
-        },
-    }
-    console.log('Token ', apiKey)
-    if (env == "sandbox") {
-        /// Initiate batch update
-        var batch = db.batch();
-        /// Update balance
-        batch.update(partnerAccount, {
-            "accounts": {
-                'XOF': {
-                    'balance': Number(userBalance) - Number(req.body.amount_received)
-                }
-            }
-        });
-    } else {
-        rp(endpointFeed, requestConfig)
-            .then((response) => {
-                let payload = {
-                    "status": response.status,
-                    "transaction status": response.data.status
-                }
-                batch.update(partnerAccount, {
-                    "status": payload
+
+    try {
+        partnersRef.where("x-api-key", "==", apiKey)
+            .get()
+            .then(function (querySnapshot) {
+                querySnapshot.forEach(function (doc) {
+                    // doc.data() is never undefined for query doc snapshots
+
+                    partnerAccount = doc.data()
+                    console.info('partnerAccount', partnerAccount)
+                    userBalance = partnerAccount['accounts'][currency]['balance'];
+                    if (Number(userBalance < Number(req.body.amount_received))) {
+                        res.status(403).json({
+                            'status': 'Failure',
+                            'message': 'Insufficient balance',
+                        })
+                    }
+
+                    if (env == "sandbox") {
+                        /// Initiate batch update
+                        var batch = db.batch();
+                        /// Update balance
+                        batch.update(partnerAccount, {
+                            "accounts": {
+                                'XOF': {
+                                    'balance': Number(userBalance) - Number(req.body.amount_received)
+                                }
+                            }
+                        });
+                    } else {
+                        rp(endpointFeed, requestConfig)
+                            .then((response) => {
+                                let payload = {
+                                    "status": response.status,
+                                    "transaction status": response.data.status
+                                }
+                                batch.update(partnerAccount, {
+                                    "status": payload
+                                })
+                                batch.commit();
+                                res.status(200).json(payload)
+                            }).catch((err) => {
+                                let payload = {
+                                    "name": err.error.status,
+                                    "statusCode": err.statusCode,
+                                    "message": err.message.replace('\\', '')
+                                }
+                                batch.commit();
+                                batch.update(partnerAccount, {
+                                    "status": payload
+                                })
+                                res.status(400).json(payload);
+                            });
+                    }
+                });
+            })
+            .catch(function (error) {
+                console.error("Unable to access this partner account ", error);
+                res.status(404).json({
+                    'status': 'Failed',
+                    'message': 'Unauthorized access. Please contact your account manager'
                 })
-                batch.commit();
-                res.status(200).json(payload)
-            }).catch((err) => {
-                let payload = {
-                    "name": err.error.status,
-                    "statusCode": err.statusCode,
-                    "message": err.message.replace('\\', '')
-                }
-                batch.commit();
-                batch.update(partnerAccount, {
-                    "status": payload
-                })
-                res.status(400).json(payload);
             });
+    } catch (error) {
+        console.error(error)
+        res.status(404).json({
+            'status': 'Failed',
+            'message': 'Unauthorized access. Please contact your account manager'
+        })
     }
+
+
+
     res.end()
 })
 
