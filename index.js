@@ -315,85 +315,86 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
     let env = req.headers['environment']
 
     if (env == 'sandbox') {
-        if (requestBody.customer_otp_code == "432123") {
+        if (requestBody.customer_otp_code == "432123" && requestBody.amount_paid == 1500) {
             res.status(200).json({
                 'status': 'Pending',
                 'transaction': req.body
             })
-            // await sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
-            //     res.status(200).json(onValue).catch((onError) => {
-            //         res.status(404).json(onError)
-            //     })
-            // })
+
 
         } else {
-            res.status(400).json({
-                "statusCode": 400,
-                "message": 'OTP invalide'
+            res.status(403).json({
+                "statusCode": 403,
+                "message": 'Informations invalides.'
             });
         }
+    } else {
+        res.status(404).json({
+            "statusCode": 404,
+            "message": 'Unauthorized'
+        });
     }
-    else {
+    // else {
 
-        let tx = [
-            {
-                "tx_type": "debit",
-                "user": req.body.customer_email,
-                "amount": req.body.amount_paid,
-                "subtype": 'charge',
-                "currency": "DEMO",
-                "metadata": {
-                    // "otp": req.body.tx_otp,
-                    "partnerTxId": req.body.partner_transaction_Id,
-                    "transaction_provider_mode": req.body.transaction_provider_mode,
-                    "transaction_provider_name": req.body.transaction_provider_name
-                }
-            },
-            {
-                "tx_type": "credit",
-                "user": req.body.partner_secret_key,
-                "amount": req.body.amount_paid,
-                "account": req.body.partner_accountRef,
-                "subtype": 'charge',
-                "currency": req.body.recipient_local_currency,
-                "metadata": {
-                    "partnerTxId": req.body.partner_transaction_Id,
-                    "transaction_provider_mode": req.body.transaction_provider_mode,
-                    "transaction_provider_name": req.body.transaction_provider_name
-                }
-            },
-        ]
+    //     let tx = [
+    //         {
+    //             "tx_type": "debit",
+    //             "user": req.body.customer_email,
+    //             "amount": req.body.amount_paid,
+    //             "subtype": 'charge',
+    //             "currency": "DEMO",
+    //             "metadata": {
+    //                 // "otp": req.body.tx_otp,
+    //                 "partnerTxId": req.body.partner_transaction_Id,
+    //                 "transaction_provider_mode": req.body.transaction_provider_mode,
+    //                 "transaction_provider_name": req.body.transaction_provider_name
+    //             }
+    //         },
+    //         {
+    //             "tx_type": "credit",
+    //             "user": req.body.partner_secret_key,
+    //             "amount": req.body.amount_paid,
+    //             "account": req.body.partner_accountRef,
+    //             "subtype": 'charge',
+    //             "currency": req.body.recipient_local_currency,
+    //             "metadata": {
+    //                 "partnerTxId": req.body.partner_transaction_Id,
+    //                 "transaction_provider_mode": req.body.transaction_provider_mode,
+    //                 "transaction_provider_name": req.body.transaction_provider_name
+    //             }
+    //         },
+    //     ]
 
-        let requestToken = 'Token ' + apiKey.toString()
-        let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
-        let requestConfig = {
-            method: 'POST',
-            json: true,
-            body: {
-                "transactions": tx
-            },
-            resolveWithFullResponse: false,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': requestToken,
-            },
-        }
+    //     let requestToken = 'Token ' + apiKey.toString()
+    //     let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
+    //     let requestConfig = {
+    //         method: 'POST',
+    //         json: true,
+    //         body: {
+    //             "transactions": tx
+    //         },
+    //         resolveWithFullResponse: false,
+    //         headers: {
+    //             'Content-Type': 'application/json',
+    //             'Authorization': requestToken,
+    //         },
+    //     }
 
-        rp(endpointFeed, requestConfig)
-            .then((response) => {
-                res.json({
-                    "status": response.status,
-                    "transaction status": response.data.status
-                })
-            }).catch((err) => {
-                console.log(req.body.amount_paid)
-                res.status(400).json({
-                    "name": err.error.status,
-                    "statusCode": err.statusCode,
-                    "message": err.message.replace('\\', '')
-                });
-            });
-    }
+    //     // rp(endpointFeed, requestConfig)
+    //     //     .then((response) => {
+    //     //         res.json({
+    //     //             "status": response.status,
+    //     //             "transaction status": response.data.status
+    //     //         })
+    //     //     }).catch((err) => {
+    //     //         console.log(req.body.amount_paid)
+    //     //         res.status(400).json({
+    //     //             "name": err.error.status,
+    //     //             "statusCode": err.statusCode,
+    //     //             "message": err.message.replace('\\', '')
+    //     //         });
+    //     //     });
+    // }
 })
 
 
