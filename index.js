@@ -315,12 +315,16 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
     let env = req.headers['environment']
 
     if (env == 'sandbox') {
-        if (requestBody.customer_otp_code == "546123") {
-            await sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
-                res.status(200).json(onValue).catch((onError) => {
-                    res.status(404).json(onError)
-                })
+        if (requestBody.customer_otp_code == "432123") {
+            res.status(200).json({
+                'status': 'Pending',
+                'transaction': req.body
             })
+            // await sendPayment('ORANGE', 200, '56525141', 'SERGE KIEMA', 5).then((onValue) => {
+            //     res.status(200).json(onValue).catch((onError) => {
+            //         res.status(404).json(onError)
+            //     })
+            // })
 
         } else {
             res.status(400).json({
