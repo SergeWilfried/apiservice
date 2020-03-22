@@ -222,6 +222,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
     var citiesRef = db.collection("partners");
     var partnerAccount;
     console.info('currency from payload', req.body.recipient_local_currency)
+    console.info(req.body)
     let tx = [
         {
             "tx_type": "debit",
@@ -270,7 +271,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
             'Authorization': requestToken,
         },
     }
-    console.log('Token ', apiKey)
+    console.info('Token ', apiKey)
     if (env == "sandbox") {
         let userBalance = 50000;
         if (Number(userBalance < Number(req.body.amount_received))) {
