@@ -5,8 +5,7 @@ var jwks = require('jwks-rsa');
 var morgan = require('morgan'); // Charge le middleware de logging
 var session = require('cookie-session'); // Charge le middleware de sessions
 var bodyParser = require('body-parser');
-var axios = require('axios');
-
+var rp = require('request-promise');
 const port = process.env.PORT || 8080;
 
 var bodyParser = require('body-parser');
@@ -280,6 +279,7 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
                 'message': 'Insufficient balance',
             })
         } else {
+
             res.status(200).json({
                 'status': 'Success',
                 'provider': req.body.transaction_provider_name.toString().toUpperCase(),
@@ -292,11 +292,16 @@ app.post('/payments/send', isAuthenticated, (req, res) => {
 
     } else {
         rp(endpointFeed, requestConfig)
-            .then((response) => {
-                res.json({
-                    "status": response.status,
-                    "transaction status": response.data.status
+            .then(async (response) => {
+                var status = await sendPayment(req.body.partner_transaction_Id, req.body.transaction_provider_name, req.body.amount_received, req.body.recipient_mobile, req.partner_callback).then((onResponse) => {
+                    console.info(onResponse)
+                    res.json({
+                        "status": response.status,
+                        "transaction status": response.data.status,
+                        'payoutStatus': status
+                    })
                 })
+
             }).catch((err) => {
                 res.status(400).json({
                     "name": err.error.status,
@@ -313,82 +318,123 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
     let requestBody = req.body
     let apiKey = req.headers['x-api-key']
     let env = req.headers['environment']
-
-    if (requestBody.customer_otp_code == "432123" && requestBody.amount_paid == 1500) {
-        res.status(200).json({
-            'status': 'Pending',
-            'transaction': req.body
-        })
-
-
-    } else {
-        res.status(403).json({
-            "statusCode": 403,
-            "message": 'Informations invalides.'
-        });
+    var citiesRef = db.collection("partners");
+    var partnerAccount;
+    console.info('currency from payload', req.body.recipient_local_currency)
+    console.info(req.body)
+    let tx = [
+        {
+            "tx_type": "debit",
+            "user": "a604bc93-febd-43ff-9398-8bc8dbe0c64e",
+            "amount": req.body.amount_received,
+            "account": req.body.partner_accountRef,
+            "subtype": 'payout',
+            "currency": 'DEMO',
+            "metadata": {
+                "partnerTxId": req.body.partner_transaction_Id,
+                "transaction_provider_mode": req.body.transaction_provider_mode,
+                "transaction_provider_name": req.body.transaction_provider_name
+            }
+        },
+        {
+            "tx_type": "credit",
+            "subtype": "payout",
+            "user": req.body.recipient_mobile,
+            "amount": req.body.amount_received,
+            "account": req.body.recipient_account_ref,
+            "currency": "TOKEN",
+            "metadata": {
+                "partnerTxId": req.body.partner_transaction_Id,
+                "transaction_provider_mode": req.body.transaction_provider_mode,
+                "transaction_provider_name": req.body.transaction_provider_name
+            }
+        }
+    ]
+    let requestToken = 'Token ' + apiKey.toString()
+    //  console.log(requestHeader)
+    let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
+    let requestConfig = {
+        method: 'POST',
+        json: true,
+        body: {
+            "transactions": tx
+        },
+        resolveWithFullResponse: false,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': requestToken,
+        },
     }
+    console.info('Token ', apiKey)
+    rp(endpointFeed, requestConfig)
+        .then(async (response) => {
+            var status = await requestPayment(req.body.partner_transaction_Id, req.body.transaction_provider_name, req.body.amount_received, req.body.recipient_mobile, req.partner_callback).then((onResponse) => {
+                console.info(onResponse)
+                res.json({
+                    "status": response.status,
+                    "transaction status": response.data.status,
+                    'payoutStatus': status
+                })
+            })
 
-    // else {
+        }).catch((err) => {
+            res.status(400).json({
+                "name": err.error.status,
+                "statusCode": err.statusCode,
+                "message": err.message.replace('\\', '')
+            });
+            console.log('error', err)
+        });
 
-    //     let tx = [
-    //         {
-    //             "tx_type": "debit",
-    //             "user": req.body.customer_email,
-    //             "amount": req.body.amount_paid,
-    //             "subtype": 'charge',
-    //             "currency": "DEMO",
-    //             "metadata": {
-    //                 // "otp": req.body.tx_otp,
-    //                 "partnerTxId": req.body.partner_transaction_Id,
-    //                 "transaction_provider_mode": req.body.transaction_provider_mode,
-    //                 "transaction_provider_name": req.body.transaction_provider_name
+    // if (requestBody.customer_otp_code == "432123" && requestBody.amount_paid == 1500) {
+    //     var userRef = db.collection("partners");
+
+    //     var query = userRef.where("x-api-key", "==", apiKey).get()
+    //         .then(function (querySnapshot) {
+    //             querySnapshot.forEach(function (doc) {
+    //                 // doc.data() is never undefined for query doc snapshots
+    //                 console.log(doc.id, " => ", doc.data());
+    //                 var balance = doc.data()['balance']
+
+
+    //                 db.collection('partners').doc(doc.id).collection('transactions')
+    //                     .set({
+    //                         'status': ResponseFromIntouch,
+    //                         'transaction': req.body
+    //                     }).then((onValue) => {
+    //                         res.status(200).json({
+    //                             'status': 'Pending',
+    //                             'body': onValue
+    //                         })
+    //                     }).catch((onError) => {
+    //                         res.status(500).json({
+    //                             'status': 'Unexpected',
+    //                             'body': onValue
+    //                         })
+    //                     })
     //             }
-    //         },
-    //         {
-    //             "tx_type": "credit",
-    //             "user": req.body.partner_secret_key,
-    //             "amount": req.body.amount_paid,
-    //             "account": req.body.partner_accountRef,
-    //             "subtype": 'charge',
-    //             "currency": req.body.recipient_local_currency,
-    //             "metadata": {
-    //                 "partnerTxId": req.body.partner_transaction_Id,
-    //                 "transaction_provider_mode": req.body.transaction_provider_mode,
-    //                 "transaction_provider_name": req.body.transaction_provider_name
-    //             }
-    //         },
-    //     ]
+    //             );
+    //         })
+    //         .catch(function (error) {
+    //             res.status(501).json({
+    //                 'status': 'Unexpected',
+    //                 'body': onValue
+    //             })
+    //             console.log("Error getting documents: ", error);
+    //         });
 
-    //     let requestToken = 'Token ' + apiKey.toString()
-    //     let endpointFeed = "https://api.rehive.com/3/admin/transactions/"
-    //     let requestConfig = {
-    //         method: 'POST',
-    //         json: true,
-    //         body: {
-    //             "transactions": tx
-    //         },
-    //         resolveWithFullResponse: false,
-    //         headers: {
-    //             'Content-Type': 'application/json',
-    //             'Authorization': requestToken,
-    //         },
-    //     }
 
-    //     // rp(endpointFeed, requestConfig)
-    //     //     .then((response) => {
-    //     //         res.json({
-    //     //             "status": response.status,
-    //     //             "transaction status": response.data.status
-    //     //         })
-    //     //     }).catch((err) => {
-    //     //         console.log(req.body.amount_paid)
-    //     //         res.status(400).json({
-    //     //             "name": err.error.status,
-    //     //             "statusCode": err.statusCode,
-    //     //             "message": err.message.replace('\\', '')
-    //     //         });
-    //     //     });
+
+
+
+
+    // } else {
+    //     res.status(403).json({
+    //         "statusCode": 403,
+    //         "message": 'Informations invalides.'
+    //     });
     // }
+
 })
 
 
@@ -658,53 +704,113 @@ async function slackWorkflow(message, channel) {
 
 
 
-async function sendPayment(provider, amount, mobile, recipientName, charge) {
-    var data = {
-        "data": {
-            "provider": provider,
-            "operation": "CASHIN",
-            "amount": amount,
-            "mobile": mobile,
-            "recipientName": recipientName,
-            "charge": charge,
-            "clientTimestamp": Date.now()
+
+
+
+
+
+
+
+
+
+
+
+/*Request Payment from a mobile money account */
+
+async function sendPayment(transactionId, provider, amount, mobile, callback) {
+
+    const options = {
+        method: method,
+        auth: {
+            'user': 'A890E336335C2A7168E0C6CDF93D284B2407E6B85BC86FD10D801CEADFEF3FA1',
+            'pass': '68D23C9C338CCF97EE6835FAEC23CBC3F979355456B72221B15806ADFFD08055',
+            'sendImmediately': false
         },
+        uri: '',
+        body: {},
+        json: true
     }
-    await axios.post(`https://us-central1-duniapay-dc166.cloudfunctions.net/toMobileMoney`, data)
-        .then(response => {
-            // JSON responses are automatically parsed.
-            console.info('SendPayment')
+    var providerCode;
+    if (user === undefined) {
+        console.log('hola')
+    }
+    if (provider == 'orangemoney') {
+        service_id = 'BF_CASHIN_OM'
 
-            console.info(response)
-        })
-        .catch(e => {
-            this.errors.push(e)
-            console.error('Payment Failure')
-
-        })
+    } else if (provider == 'mobicash') {
+        service_id = 'BF_CASHIN_MOBICASH'
+    }
+    options.uri = 'https://api.gutouch.com/v1/DUNYA0827/cashin'
+    options.body = {
+        login_api: '11223345',
+        password_api: '0000',
+        call_back_url: callback,
+        partner_id: 'BF1163',
+        amount: amount,
+        partner_transaction_id: transactionId,
+        service_id: service_id,
+        recipient_phone_number: trimCountryCode(mobile)
+    }
+    return rp(options)
 }
 
-async function requestPayment(provider, amount, mobile, otp, recipientName, charge) {
-    var data = {
-        "data": {
-            "provider": provider,
-            "operation": "CASHIN",
-            "amount": amount,
-            "mobile": mobile,
-            "otp": otp,
-            "recipientName": recipientName,
-            "charge": charge,
-            "clientTimestamp": Date.now()
+
+
+
+
+
+
+/*Request Payment to a mobile money account */
+async function requestPayment(provider, amount, mobile, recipientName, otp, callback) {
+    const options = {
+        method: method,
+        auth: {
+            'user': 'A890E336335C2A7168E0C6CDF93D284B2407E6B85BC86FD10D801CEADFEF3FA1',
+            'pass': '68D23C9C338CCF97EE6835FAEC23CBC3F979355456B72221B15806ADFFD08055',
+            'sendImmediately': false
         },
+        uri: '',
+        body: {},
+        json: true
     }
-    await axios.post(`https://us-central1-duniapay-dc166.cloudfunctions.net/postIntouch`)
-        .then(response => {
-            // JSON responses are automatically parsed.
-            this.posts = response.data
-        })
-        .catch(e => {
-            this.errors.push(e)
-        })
+    var providerCode;
+    if (user === undefined) {
+        console.log('hola')
+    }
+    if (provider == 'orangemoney') {
+        providerCode = 'BF_PAIEMENTMARCHAND_OM'
+    } else if (provider == 'mobicash') {
+        providerCode = 'BF_PAIEMENTMARCHAND_MOBICASH'
+    }
+    options.uri = 'https://api.gutouch.com/dist/api/touchpayapi/v1/DUNYA0827/transaction?loginAgent=11223345&passwordAgent=0000'
+    options.body = {
+        idFromClient: transactionId,
+        amount: amount,
+        callback: callback,
+        recipientNumber: trimCountryCode(mobile),
+        serviceCode: providerCode,
+        additionnalInfos: {
+            recipientEmail: '',
+            recipientFirstName: recipientName,
+            recipientLastName: '',
+        }
+    }
+
+    if (provider == IntouchProvider.ORANGE || provider == IntouchProvider.TELMOB) {
+        options.uri = 'https://api.gutouch.com/dist/api/touchpayapi/v1/DUNYA0827/transaction?loginAgent=11223345&passwordAgent=0000'
+        options.body.additionnalInfos = {
+            ...options.body.additionnalInfos,
+            destinataire: trimCountryCode(phoneNumber),
+            otp: otp
+        }
+    }
+    return rp(options)
+
 }
 
+
+
+function trimCountryCode(phoneNumber) {
+    return phoneNumber.replace('+226', '')
+}
 
