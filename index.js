@@ -324,11 +324,12 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
     console.info(req.body)
     let tx = [
         {
-            "tx_type": "debit",
+            "tx_type": "credit",
             "user": "a604bc93-febd-43ff-9398-8bc8dbe0c64e",
             "amount": req.body.amount_paid,
-            "account": req.body.partner_accountRef,
-            "subtype": 'payout',
+            // "account": req.body.partner_accountRef,
+            "subtype": 'merchant-payment',
+            'status': "Pending",
             "currency": 'DEMO',
             "metadata": {
                 "partnerTxId": req.body.partner_transaction_Id,
@@ -336,19 +337,7 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
                 "transaction_provider_name": req.body.transaction_provider_name
             }
         },
-        {
-            "tx_type": "credit",
-            "subtype": "payout",
-            "user": req.body.recipient_mobile,
-            "amount": req.body.amount_paid,
-            "account": req.body.recipient_account_ref,
-            "currency": "TOKEN",
-            "metadata": {
-                "partnerTxId": req.body.partner_transaction_Id,
-                "transaction_provider_mode": req.body.transaction_provider_mode,
-                "transaction_provider_name": req.body.transaction_provider_name
-            }
-        }
+
     ]
     let requestToken = 'Token ' + apiKey.toString()
     //  console.log(requestHeader)
