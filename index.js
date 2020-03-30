@@ -328,7 +328,7 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
             "user": "a604bc93-febd-43ff-9398-8bc8dbe0c64e",
             "amount": req.body.amount_paid,
             // "account": req.body.partner_accountRef,
-            "subtype": 'merchant-payment',
+            "subtype": 'purchase',
             'status': "Pending",
             "currency": 'DEMO',
             "metadata": {
