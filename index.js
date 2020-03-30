@@ -326,7 +326,7 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
         {
             "tx_type": "debit",
             "user": "a604bc93-febd-43ff-9398-8bc8dbe0c64e",
-            "amount": req.body.amount_received,
+            "amount": req.body.amount_paid,
             "account": req.body.partner_accountRef,
             "subtype": 'payout',
             "currency": 'DEMO',
@@ -340,7 +340,7 @@ app.post('/payments/request', isAuthenticated, async (req, res) => {
             "tx_type": "credit",
             "subtype": "payout",
             "user": req.body.recipient_mobile,
-            "amount": req.body.amount_received,
+            "amount": req.body.amount_paid,
             "account": req.body.recipient_account_ref,
             "currency": "TOKEN",
             "metadata": {
