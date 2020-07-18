@@ -72,47 +72,6 @@ duniapay.transactions.list({perPage: 20})
 	});
 ```
 
-### Resources
-
-- customer
-  - create
-  - get
-  - list
-  - update
-- transaction
-  - initialize
-  - charge
-  - get
-  - list
-  - totals
-  - verify
-- plan
-  - create
-  - get
-  - list
-  - update
-- page
-  - create
-  - get
-  - list
-  - update
-- subscription
-  - create
-  - disable
-  - enable
-  - get
-  - list
-- subaccount
-  - create
-  - get
-  - list
-  - listBanks
-  - update
-- Miscellanous
-  - list_banks
-  - resolve_bin
-  
-
 
 ### Contributing
 - To ensure consistent code style, please follow the [editorconfig rules](http://obem.be/2015/06/01/a-quick-note-on-editorconfig.html) in .editorconfig
