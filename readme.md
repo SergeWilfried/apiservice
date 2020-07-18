@@ -1,6 +1,6 @@
 ## DuniaPay ![Build status](https://travis-ci.org/theslyone/node-duniapay.svg?branch=master)
 
-Nodejs API wrapper for [DuniaPay](https://duniapay.co/).
+Nodejs Interface For DuniaPay Banking integration for [DuniaPay](https://duniapay.co/).
 
 ### Installation
 
